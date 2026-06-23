@@ -19,7 +19,7 @@ import { colors, spacing, radius, typography } from '../theme';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Schedule'>;
 type RouteType = RouteProp<RootStackParamList, 'Schedule'>;
-type FilterOption = 'all' | 'todo' | 'done';
+type FilterOption = 'todo' | 'today' | 'deadline' | 'done';
 
 const H_PAD = spacing.xl;
 
@@ -37,8 +37,9 @@ const CARD_COLORS = [
 ];
 
 const FILTER_LABELS: Record<FilterOption, string> = {
-  all: 'All',
-  todo: 'Active',
+  todo: 'To Do',
+  today: 'Today',
+  deadline: 'Deadline',
   done: 'Done',
 };
 
@@ -65,7 +66,7 @@ export default function ScheduleScreen() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteType>();
   const { tasks } = useTasksContext();
-  const [filter, setFilter] = React.useState<FilterOption>(route.params?.filter ?? 'all');
+  const [filter, setFilter] = React.useState<FilterOption>(route.params?.filter ?? 'today');
   const [selectedDate, setSelectedDate] = React.useState(todayStr);
 
   const taskDates = useMemo(
@@ -75,23 +76,41 @@ export default function ScheduleScreen() {
 
   const filterCounts = useMemo(
     () => ({
-      all: tasks.length,
-      todo: tasks.filter(t => t.status === 'todo').length,
-      done: tasks.filter(t => t.status === 'done').length,
+      todo: tasks.filter(
+        t =>
+          t.status === 'todo' &&
+          toDateStr(t.createdAt) <= selectedDate &&
+          toDateStr(t.deadline) >= selectedDate,
+      ).length,
+      today: tasks.filter(t => toDateStr(t.createdAt) === selectedDate).length,
+      deadline: tasks.filter(t => toDateStr(t.deadline) === selectedDate).length,
+      done: tasks.filter(
+        t => !!t.finishDate && toDateStr(t.finishDate) === selectedDate,
+      ).length,
     }),
-    [tasks],
+    [tasks, selectedDate],
   );
 
   const timelineTasks = useMemo(() => {
-    const dateFiltered = tasks.filter(
-      t => toDateStr(t.createdAt) === selectedDate,
-    );
-    const statusFiltered =
-      filter === 'all'
-        ? dateFiltered
-        : dateFiltered.filter(t => t.status === filter);
+    let filtered: typeof tasks;
+    if (filter === 'todo') {
+      filtered = tasks.filter(
+        t =>
+          t.status === 'todo' &&
+          toDateStr(t.createdAt) <= selectedDate &&
+          toDateStr(t.deadline) >= selectedDate,
+      );
+    } else if (filter === 'today') {
+      filtered = tasks.filter(t => toDateStr(t.createdAt) === selectedDate);
+    } else if (filter === 'deadline') {
+      filtered = tasks.filter(t => toDateStr(t.deadline) === selectedDate);
+    } else {
+      filtered = tasks.filter(
+        t => !!t.finishDate && toDateStr(t.finishDate) === selectedDate,
+      );
+    }
 
-    return [...statusFiltered]
+    return [...filtered]
       .sort(
         (a, b) =>
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
@@ -112,6 +131,11 @@ export default function ScheduleScreen() {
     const today = todayStr();
     if (selectedDate === today) return 'Today';
     return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  }, [selectedDate]);
+
+  const monthYearLabel = useMemo(() => {
+    const d = new Date(selectedDate + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }, [selectedDate]);
 
   return (
@@ -135,6 +159,7 @@ export default function ScheduleScreen() {
       </View>
 
       <View style={styles.calendarWrap}>
+        <Text style={styles.monthYear}>{monthYearLabel}</Text>
         <WeekCalendar
           taskDates={taskDates}
           selectedDate={selectedDate}
@@ -142,8 +167,13 @@ export default function ScheduleScreen() {
         />
       </View>
 
-      <View style={styles.filterRow}>
-        {(['all', 'todo', 'done'] as FilterOption[]).map(f => (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={styles.filterRow}
+      >
+        {(['todo', 'today', 'deadline', 'done'] as FilterOption[]).map(f => (
           <TouchableOpacity
             key={f}
             style={[styles.filterChip, filter === f && styles.filterChipActive]}
@@ -175,7 +205,7 @@ export default function ScheduleScreen() {
             </View>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       <View style={styles.divider} />
 
@@ -255,6 +285,16 @@ const styles = StyleSheet.create({
   calendarWrap: {
     paddingHorizontal: H_PAD,
     paddingBottom: spacing.sm,
+  },
+  monthYear: {
+    fontSize: typography.xl,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.3,
+    paddingTop: spacing.sm,
+  },
+  filterScroll: {
+    flexGrow: 0,
   },
   filterRow: {
     flexDirection: 'row',

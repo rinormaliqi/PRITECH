@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  Alert,
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp, NavigationProp } from '@react-navigation/native';
@@ -15,6 +14,7 @@ import { useTasksContext } from '../context/TasksContext';
 import { RootStackParamList } from '../types';
 import { getCollar } from '../data/collars';
 import { getTheme } from '../data/taskThemes';
+import AppAlert, { AlertConfig } from '../components/AppAlert';
 import { colors, spacing, radius, typography } from '../theme';
 
 type RouteType = RouteProp<RootStackParamList, 'TaskDetail'>;
@@ -32,29 +32,26 @@ export default function TaskDetailScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteType>();
   const { getTask, toggleTask, deleteTask } = useTasksContext();
+  const [alert, setAlert] = useState<AlertConfig | null>(null);
 
   const task = getTask(route.params.taskId);
 
+  const dismissAlert = () => setAlert(null);
+
   const confirmDelete = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Delete this task? This cannot be undone.')) {
+    setAlert({
+      title: 'Delete Task',
+      message: 'Are you sure? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      destructive: true,
+      onConfirm: () => {
+        dismissAlert();
         deleteTask(task!.id);
         navigation.goBack();
-      }
-      return;
-    }
-    Alert.alert(
-      'Delete Task',
-      'Are you sure you want to delete this task?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => { deleteTask(task!.id); navigation.goBack(); },
-        },
-      ],
-    );
+      },
+      onCancel: dismissAlert,
+    });
   };
 
   if (!task) {
@@ -75,38 +72,32 @@ export default function TaskDetailScreen() {
   const supervisor = task.supervisor ? getCollar(task.supervisor) : null;
 
   const confirmToggle = () => {
-    const action = isDone ? 'Mark as Active' : 'Mark as Done';
-    const successMsg = isDone
-      ? 'Task has been marked as active.'
-      : 'Task has been marked as done.';
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`${action}?\n\nAre you sure you want to change the status of this task?`)) {
+    const becomingDone = !isDone;
+    setAlert({
+      title: becomingDone ? 'Mark as Done' : 'Mark as Active',
+      message: 'Are you sure you want to change the status of this task?',
+      confirmLabel: 'Yes, continue',
+      cancelLabel: 'Cancel',
+      onConfirm: () => {
         toggleTask(task.id);
-        window.alert(successMsg);
-      }
-      return;
-    }
-
-    Alert.alert(
-      action,
-      'Are you sure you want to change the status of this task?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Yes, continue',
-          style: 'default',
-          onPress: () => {
-            toggleTask(task.id);
-            Alert.alert('Done', successMsg, [{ text: 'OK' }]);
-          },
-        },
-      ],
-    );
+        setAlert({
+          title: becomingDone ? 'Marked as Done' : 'Marked as Active',
+          message: becomingDone
+            ? 'Task has been completed.'
+            : 'Task has been moved back to active.',
+          confirmLabel: 'OK',
+          showCancel: false,
+          onConfirm: dismissAlert,
+        });
+      },
+      onCancel: dismissAlert,
+    });
   };
 
   return (
     <SafeAreaView style={styles.safe}>
+      <AppAlert config={alert} />
+
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backBtn}
@@ -155,6 +146,16 @@ export default function TaskDetailScreen() {
             <View>
               <Text style={styles.metaLabel}>Created</Text>
               <Text style={styles.metaValue}>{formatDate(task.createdAt)}</Text>
+            </View>
+          </View>
+
+          <View style={styles.metaRow}>
+            <Ionicons name="timer-outline" size={15} color={colors.textMuted} />
+            <View>
+              <Text style={styles.metaLabel}>Deadline</Text>
+              <Text style={[styles.metaValue, { color: colors.cardRed }]}>
+                {formatDate(task.deadline)}
+              </Text>
             </View>
           </View>
 

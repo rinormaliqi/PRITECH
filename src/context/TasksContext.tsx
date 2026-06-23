@@ -10,6 +10,8 @@ interface TasksContextValue {
     description: string,
     supervisor?: string | null,
     theme?: string,
+    dateStr?: string,
+    deadlineStr?: string,
   ) => void;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;

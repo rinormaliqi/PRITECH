@@ -12,6 +12,15 @@ function save(tasks: Task[]) {
   AsyncStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
 }
 
+function addDays(isoDate: string, days: number): string {
+  const d = new Date(isoDate);
+  d.setDate(d.getDate() + days);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +34,7 @@ export function useTasks() {
             ...t,
             supervisor: t.supervisor ?? null,
             theme: t.theme ?? DEFAULT_THEME_ID,
+            deadline: t.deadline ?? addDays(t.createdAt, 7),
           }));
           setTasks(migrated);
         } catch {}
@@ -39,13 +49,22 @@ export function useTasks() {
       description: string,
       supervisor: string | null = null,
       theme: string = DEFAULT_THEME_ID,
+      dateStr?: string,
+      deadlineStr?: string,
     ) => {
+      const now = new Date();
+      if (dateStr) {
+        const [y, mo, d] = dateStr.split('-').map(Number);
+        now.setFullYear(y, mo - 1, d);
+      }
+      const createdAt = now.toISOString();
       const task: Task = {
         id: generateId(),
         title: title.trim(),
         description: description.trim(),
         status: 'todo',
-        createdAt: new Date().toISOString(),
+        createdAt,
+        deadline: deadlineStr ?? addDays(createdAt, 7),
         supervisor,
         theme,
       };

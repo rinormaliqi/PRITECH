@@ -14,13 +14,23 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 import { useTasksContext } from '../context/TasksContext';
-import { COLLARS, DEFAULT_COLLAR_ID } from '../data/collars';
+import { COLLARS } from '../data/collars';
 import { TASK_THEMES, DEFAULT_THEME_ID } from '../data/taskThemes';
 import SelectPicker, { PickerOption } from '../components/SelectPicker';
+import DateInput, { todayStr } from '../components/DateInput';
 import { colors, spacing, radius, typography } from '../theme';
 
 const MAX_TITLE = 80;
 const MAX_DESC = 300;
+
+function defaultDeadline(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 const webInput = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : {};
 
@@ -45,6 +55,8 @@ export default function AddTaskScreen() {
   const [description, setDescription] = useState('');
   const [supervisor, setSupervisor] = useState<string | null>(null);
   const [theme, setTheme] = useState(DEFAULT_THEME_ID);
+  const [date, setDate] = useState(todayStr());
+  const [deadline, setDeadline] = useState(defaultDeadline());
   const [titleError, setTitleError] = useState('');
   const descRef = useRef<TextInput>(null);
 
@@ -53,7 +65,7 @@ export default function AddTaskScreen() {
       setTitleError('Title is required.');
       return;
     }
-    addTask(title, description, supervisor, theme);
+    addTask(title, description, supervisor, theme, date, deadline);
     navigation.goBack();
   };
 
@@ -120,6 +132,18 @@ export default function AddTaskScreen() {
             />
             <Text style={styles.counter}>{description.length}/{MAX_DESC}</Text>
           </View>
+
+          <DateInput
+            label="Date"
+            value={date}
+            onChange={setDate}
+          />
+
+          <DateInput
+            label="Deadline"
+            value={deadline}
+            onChange={setDeadline}
+          />
 
           <SelectPicker
             label="Theme / Category"

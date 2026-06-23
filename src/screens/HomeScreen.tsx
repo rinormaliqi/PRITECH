@@ -113,7 +113,7 @@ export default function HomeScreen() {
 
         <View style={styles.categories}>
           <CategoryItem
-            label="To-Do"
+            label="To Do"
             iconBg={colors.categoryTodoBg}
             icon={
               <Ionicons
@@ -125,28 +125,28 @@ export default function HomeScreen() {
             onPress={() => navigation.navigate('Schedule', { filter: 'todo' })}
           />
           <CategoryItem
-            label="Done"
+            label="Today"
             iconBg={colors.categoryDoneBg}
             icon={
               <Ionicons
-                name="checkmark-circle-outline"
+                name="today-outline"
                 size={26}
                 color={colors.categoryDoneIcon}
               />
             }
-            onPress={() => navigation.navigate('Schedule', { filter: 'done' })}
+            onPress={() => navigation.navigate('Schedule', { filter: 'today' })}
           />
           <CategoryItem
-            label="All Tasks"
+            label="Deadline"
             iconBg={colors.categoryProgressBg}
             icon={
               <Ionicons
-                name="grid-outline"
+                name="timer-outline"
                 size={26}
                 color={colors.categoryProgressIcon}
               />
             }
-            onPress={() => navigation.navigate('Schedule', { filter: 'all' })}
+            onPress={() => navigation.navigate('Schedule', { filter: 'deadline' })}
           />
         </View>
 
@@ -156,7 +156,7 @@ export default function HomeScreen() {
           </Text>
           {!isSearching && (
             <TouchableOpacity
-              onPress={() => navigation.navigate('Schedule', { filter: 'all' })}
+              onPress={() => navigation.navigate('Schedule', { filter: 'today' })}
               activeOpacity={0.7}
             >
               <Text style={styles.seeAll}>See All</Text>
