@@ -1,13 +1,16 @@
-export type TaskStatus = 'todo' | 'progress' | 'done';
+export type TaskStatus = 'todo' | 'done';
 
 export interface Task {
   id: string;
   title: string;
   description: string;
-  time: string;
   status: TaskStatus;
-  progress: number;
-  cardColor: string;
+  createdAt: string;
+}
+
+export interface Quote {
+  content: string;
+  author: string;
 }
 
 export interface ScheduleTask {
@@ -20,13 +23,10 @@ export interface ScheduleTask {
   active: boolean;
 }
 
-export interface WeekDay {
-  day: string;
-  date: number;
-  selected: boolean;
-}
-
 export type RootStackParamList = {
+  Welcome: undefined;
   Home: undefined;
+  AddTask: undefined;
+  TaskDetail: { taskId: string };
   Schedule: undefined;
 };

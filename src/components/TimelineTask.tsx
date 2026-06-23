@@ -1,14 +1,24 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { ScheduleTask } from '../types';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, spacing, radius, typography } from '../theme';
 
-interface TimelineTaskProps {
-  task: ScheduleTask;
-  isLast: boolean;
+interface TimelineTaskData {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  cardColor: string;
+  dotColor: string;
+  active: boolean;
 }
 
-export default function TimelineTask({ task, isLast }: TimelineTaskProps) {
+interface Props {
+  task: TimelineTaskData;
+  isLast: boolean;
+  onPress?: () => void;
+}
+
+export default function TimelineTask({ task, isLast, onPress }: Props) {
   return (
     <View style={styles.row}>
       <View style={styles.rail}>
@@ -22,13 +32,17 @@ export default function TimelineTask({ task, isLast }: TimelineTaskProps) {
         {!isLast && <View style={styles.line} />}
       </View>
 
-      <View style={[styles.card, { backgroundColor: task.cardColor }]}>
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: task.cardColor }]}
+        onPress={onPress}
+        activeOpacity={onPress ? 0.75 : 1}
+      >
         <View style={styles.cardTop}>
-          <Text style={styles.title}>{task.title}</Text>
+          <Text style={styles.title} numberOfLines={1}>{task.title}</Text>
           <Text style={styles.time}>{task.time}</Text>
         </View>
-        <Text style={styles.description}>{task.description}</Text>
-      </View>
+        <Text style={styles.description} numberOfLines={2}>{task.description}</Text>
+      </TouchableOpacity>
     </View>
   );
 }
