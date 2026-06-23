@@ -1,0 +1,14 @@
+# normalise line endings
+* text=auto eol=lf
+
+# binary assets — never diff or merge
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
