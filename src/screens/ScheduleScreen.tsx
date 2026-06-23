@@ -8,7 +8,7 @@ import {
   SafeAreaView,
   Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useTasksContext } from '../context/TasksContext';
@@ -18,6 +18,8 @@ import TimelineTask from '../components/TimelineTask';
 import { colors, spacing, radius, typography } from '../theme';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Schedule'>;
+type RouteType = RouteProp<RootStackParamList, 'Schedule'>;
+type FilterOption = 'all' | 'todo' | 'done';
 
 const H_PAD = spacing.xl;
 
@@ -34,6 +36,24 @@ const CARD_COLORS = [
   colors.tlCardPink,
 ];
 
+const FILTER_LABELS: Record<FilterOption, string> = {
+  all: 'All',
+  todo: 'Active',
+  done: 'Done',
+};
+
+function toDateStr(iso: string): string {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function todayStr(): string {
+  return toDateStr(new Date().toISOString());
+}
+
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -41,18 +61,17 @@ function formatTime(iso: string): string {
   });
 }
 
-type FilterOption = 'all' | 'todo' | 'done';
-
-const FILTER_LABELS: Record<FilterOption, string> = {
-  all: 'All',
-  todo: 'Active',
-  done: 'Done',
-};
-
 export default function ScheduleScreen() {
   const navigation = useNavigation<NavProp>();
+  const route = useRoute<RouteType>();
   const { tasks } = useTasksContext();
-  const [filter, setFilter] = React.useState<FilterOption>('all');
+  const [filter, setFilter] = React.useState<FilterOption>(route.params?.filter ?? 'all');
+  const [selectedDate, setSelectedDate] = React.useState(todayStr);
+
+  const taskDates = useMemo(
+    () => new Set(tasks.map(t => toDateStr(t.createdAt))),
+    [tasks],
+  );
 
   const filterCounts = useMemo(
     () => ({
@@ -64,9 +83,15 @@ export default function ScheduleScreen() {
   );
 
   const timelineTasks = useMemo(() => {
-    const filtered =
-      filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
-    return [...filtered]
+    const dateFiltered = tasks.filter(
+      t => toDateStr(t.createdAt) === selectedDate,
+    );
+    const statusFiltered =
+      filter === 'all'
+        ? dateFiltered
+        : dateFiltered.filter(t => t.status === filter);
+
+    return [...statusFiltered]
       .sort(
         (a, b) =>
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
@@ -80,7 +105,14 @@ export default function ScheduleScreen() {
         dotColor: DOT_COLORS[index % DOT_COLORS.length],
         active: task.status === 'todo',
       }));
-  }, [tasks, filter]);
+  }, [tasks, selectedDate, filter]);
+
+  const selectedDateLabel = useMemo(() => {
+    const d = new Date(selectedDate + 'T00:00:00');
+    const today = todayStr();
+    if (selectedDate === today) return 'Today';
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  }, [selectedDate]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -103,7 +135,11 @@ export default function ScheduleScreen() {
       </View>
 
       <View style={styles.calendarWrap}>
-        <WeekCalendar />
+        <WeekCalendar
+          taskDates={taskDates}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+        />
       </View>
 
       <View style={styles.filterRow}>
@@ -152,9 +188,9 @@ export default function ScheduleScreen() {
               color={colors.textMuted}
             />
           </View>
-          <Text style={styles.emptyTitle}>No tasks yet</Text>
+          <Text style={styles.emptyTitle}>No tasks for {selectedDateLabel}</Text>
           <Text style={styles.emptySub}>
-            Tap "Add Task" above to create your first task.
+            Tap "Add Task" above to create a task.
           </Text>
         </View>
       ) : (
@@ -163,6 +199,7 @@ export default function ScheduleScreen() {
           contentContainerStyle={styles.timelineContent}
           showsVerticalScrollIndicator={false}
         >
+          <Text style={styles.dateHeading}>{selectedDateLabel}</Text>
           {timelineTasks.map((task, index) => (
             <TimelineTask
               key={task.id}
@@ -281,6 +318,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: H_PAD,
     paddingBottom: 40,
   },
+  dateHeading: {
+    fontSize: typography.md,
+    fontWeight: '700',
+    color: colors.textSub,
+    marginBottom: spacing.lg,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
   empty: {
     flex: 1,
     alignItems: 'center',
@@ -301,12 +346,13 @@ const styles = StyleSheet.create({
     fontSize: typography.lg,
     fontWeight: '700',
     color: colors.text,
+    textAlign: 'center',
   },
   emptySub: {
     fontSize: typography.md,
     color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 22,
-    maxWidth: 220,
+    maxWidth: 240,
   },
 });

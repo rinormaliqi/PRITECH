@@ -9,7 +9,7 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { RootStackParamList } from './src/types';
 import { colors } from './src/theme';
 
-const MAX_APP_WIDTH = 430;
+import { MAX_APP_WIDTH } from './src/theme/constants';
 
 function AppContent() {
   const { loading, name } = useUserContext();

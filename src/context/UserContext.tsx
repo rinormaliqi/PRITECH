@@ -3,8 +3,11 @@ import { useUser } from '../hooks/useUser';
 
 interface UserContextValue {
   name: string | null;
+  collar: string | null;
   loading: boolean;
   saveName: (name: string) => Promise<void>;
+  saveCollar: (collarId: string) => Promise<void>;
+  saveProfile: (name: string, collarId: string) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextValue | null>(null);

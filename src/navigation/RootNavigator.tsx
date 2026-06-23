@@ -6,6 +6,7 @@ import HomeScreen from '../screens/HomeScreen';
 import AddTaskScreen from '../screens/AddTaskScreen';
 import TaskDetailScreen from '../screens/TaskDetailScreen';
 import ScheduleScreen from '../screens/ScheduleScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -32,6 +33,7 @@ export default function RootNavigator({ initialRoute }: Props) {
       />
       <Stack.Screen name="TaskDetail" component={TaskDetailScreen} />
       <Stack.Screen name="Schedule" component={ScheduleScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>
   );
 }

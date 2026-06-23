@@ -5,7 +5,12 @@ import { Task } from '../types';
 interface TasksContextValue {
   tasks: Task[];
   loading: boolean;
-  addTask: (title: string, description: string) => void;
+  addTask: (
+    title: string,
+    description: string,
+    supervisor?: string | null,
+    theme?: string,
+  ) => void;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
   getTask: (id: string) => Task | undefined;

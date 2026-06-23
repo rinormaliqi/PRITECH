@@ -14,14 +14,25 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { useUserContext } from '../context/UserContext';
+import { COLLARS, DEFAULT_COLLAR_ID } from '../data/collars';
+import SelectPicker, { PickerOption } from '../components/SelectPicker';
+import PritechLogo from '../components/PritechLogo';
 import { colors, spacing, radius, typography } from '../theme';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Welcome'>;
 
+const COLLAR_OPTIONS: PickerOption[] = COLLARS.map(c => ({
+  value: c.id,
+  label: c.title,
+  color: c.color,
+  bg: c.bg,
+}));
+
 export default function WelcomeScreen() {
   const navigation = useNavigation<NavProp>();
-  const { saveName } = useUserContext();
+  const { saveProfile } = useUserContext();
   const [name, setName] = useState('');
+  const [collar, setCollar] = useState(DEFAULT_COLLAR_ID);
   const [error, setError] = useState('');
 
   const handleStart = async () => {
@@ -29,7 +40,7 @@ export default function WelcomeScreen() {
       setError('Please enter your name to continue.');
       return;
     }
-    await saveName(name.trim());
+    await saveProfile(name.trim(), collar);
     navigation.replace('Home');
   };
 
@@ -45,33 +56,49 @@ export default function WelcomeScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoLetter}>P</Text>
+            <View style={styles.logoWrap}>
+              <PritechLogo size="lg" />
             </View>
-            <Text style={styles.appName}>Pritech</Text>
             <Text style={styles.tagline}>Your tasks, organized.</Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.formHeading}>What's your name?</Text>
+            <Text style={styles.formHeading}>Let's get started</Text>
             <Text style={styles.formSub}>
-              We'll use this to personalize your experience.
+              Tell us a bit about yourself to personalize your workspace.
             </Text>
 
-            <TextInput
-              style={[styles.input, !!error && styles.inputError]}
-              placeholder="Enter your name..."
-              placeholderTextColor={colors.textMuted}
-              value={name}
-              onChangeText={v => { setName(v); setError(''); }}
-              maxLength={40}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={handleStart}
-              autoCapitalize="words"
-              autoCorrect={false}
-            />
-            {!!error && <Text style={styles.errorText}>{error}</Text>}
+            <View style={styles.fieldGroup}>
+              <View style={styles.field}>
+                <Text style={styles.label}>Your name <Text style={styles.required}>*</Text></Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    !!error && styles.inputError,
+                    Platform.OS === 'web' && ({ outlineStyle: 'none' } as object),
+                  ]}
+                  placeholder="Enter your name..."
+                  placeholderTextColor={colors.textMuted}
+                  value={name}
+                  onChangeText={v => { setName(v); setError(''); }}
+                  maxLength={40}
+                  autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={handleStart}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                />
+                {!!error && <Text style={styles.errorText}>{error}</Text>}
+              </View>
+
+              <SelectPicker
+                label="Job title"
+                value={collar}
+                options={COLLAR_OPTIONS}
+                onChange={setCollar}
+                placeholder="Select your role..."
+              />
+            </View>
 
             <TouchableOpacity
               style={[styles.btn, !name.trim() && styles.btnDisabled]}
@@ -102,29 +129,12 @@ const styles = StyleSheet.create({
   },
   hero: {
     alignItems: 'center',
-    paddingTop: 64,
-    paddingBottom: 52,
+    paddingTop: 56,
+    paddingBottom: 48,
+    gap: spacing.lg,
   },
-  logoCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: radius.full,
-    backgroundColor: colors.cardBlue,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  logoLetter: {
-    fontSize: 42,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  appName: {
-    fontSize: typography.xxl,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.5,
-    marginBottom: spacing.xs,
+  logoWrap: {
+    marginBottom: spacing.sm,
   },
   tagline: {
     fontSize: typography.md,
@@ -132,19 +142,33 @@ const styles = StyleSheet.create({
   },
   form: {
     flex: 1,
+    gap: spacing.xl,
   },
   formHeading: {
     fontSize: typography.xxl,
     fontWeight: '700',
     color: colors.text,
     letterSpacing: -0.3,
-    marginBottom: spacing.sm,
   },
   formSub: {
     fontSize: typography.md,
     color: colors.textSub,
     lineHeight: 22,
-    marginBottom: spacing.xxl,
+    marginTop: -spacing.md,
+  },
+  fieldGroup: {
+    gap: spacing.xl,
+  },
+  field: {
+    gap: spacing.sm,
+  },
+  label: {
+    fontSize: typography.sm,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  required: {
+    color: colors.cardRed,
   },
   input: {
     height: 52,
@@ -155,8 +179,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     fontSize: typography.md,
     color: colors.text,
-    marginBottom: spacing.md,
-    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : {}),
   },
   inputError: {
     borderColor: colors.cardRed,
@@ -164,7 +186,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: typography.sm,
     color: colors.cardRed,
-    marginBottom: spacing.md,
   },
   btn: {
     height: 52,
@@ -175,7 +196,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   btnDisabled: {
-    backgroundColor: '#C8C8E8',
+    backgroundColor: '#A0E8E5',
   },
   btnText: {
     fontSize: typography.md,

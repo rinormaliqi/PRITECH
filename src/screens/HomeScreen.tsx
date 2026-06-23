@@ -17,12 +17,13 @@ import { RootStackParamList } from '../types';
 import SearchBar from '../components/SearchBar';
 import CategoryItem from '../components/CategoryItem';
 import TaskCard from '../components/TaskCard';
+import PritechLogo from '../components/PritechLogo';
+import QuoteCard from '../components/QuoteCard';
 import { colors, spacing, radius, typography } from '../theme';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 const CARD_COLORS = [colors.cardBlue, colors.cardRed];
-
 const H_PAD = spacing.xl;
 
 function timeGreeting(): string {
@@ -70,14 +71,25 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <TouchableOpacity style={styles.menuBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.menuBtn}
+            onPress={() => navigation.navigate('Profile')}
+            activeOpacity={0.7}
+          >
             <Ionicons name="menu-outline" size={22} color={colors.text} />
           </TouchableOpacity>
-          <View style={styles.avatar}>
+
+          <PritechLogo size="sm" />
+
+          <TouchableOpacity
+            style={styles.avatar}
+            onPress={() => navigation.navigate('Profile')}
+            activeOpacity={0.7}
+          >
             <Text style={styles.avatarText}>
               {(name ?? 'U')[0].toUpperCase()}
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.hero}>
@@ -97,6 +109,8 @@ export default function HomeScreen() {
           <SearchBar value={query} onChangeText={setQuery} />
         </View>
 
+        <QuoteCard />
+
         <View style={styles.categories}>
           <CategoryItem
             label="To-Do"
@@ -108,7 +122,7 @@ export default function HomeScreen() {
                 color={colors.categoryTodoIcon}
               />
             }
-            onPress={() => navigation.navigate('Schedule')}
+            onPress={() => navigation.navigate('Schedule', { filter: 'todo' })}
           />
           <CategoryItem
             label="Done"
@@ -120,7 +134,7 @@ export default function HomeScreen() {
                 color={colors.categoryDoneIcon}
               />
             }
-            onPress={() => navigation.navigate('Schedule')}
+            onPress={() => navigation.navigate('Schedule', { filter: 'done' })}
           />
           <CategoryItem
             label="All Tasks"
@@ -132,7 +146,7 @@ export default function HomeScreen() {
                 color={colors.categoryProgressIcon}
               />
             }
-            onPress={() => navigation.navigate('Schedule')}
+            onPress={() => navigation.navigate('Schedule', { filter: 'all' })}
           />
         </View>
 
@@ -142,7 +156,7 @@ export default function HomeScreen() {
           </Text>
           {!isSearching && (
             <TouchableOpacity
-              onPress={() => navigation.navigate('Schedule')}
+              onPress={() => navigation.navigate('Schedule', { filter: 'all' })}
               activeOpacity={0.7}
             >
               <Text style={styles.seeAll}>See All</Text>

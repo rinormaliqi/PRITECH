@@ -3,7 +3,7 @@ export const colors = {
   surface: '#FFFFFF',
   shellBackground: '#ECEDF2',
 
-  cardBlue: '#6C63FF',
+  cardBlue: '#2DCFC8',
   cardRed: '#E8526A',
 
   categoryTodoBg: '#FFF1F3',
@@ -14,7 +14,7 @@ export const colors = {
   categoryDoneIcon: '#2DC88E',
 
   timelineAccent: '#E8526A',
-  timelineLine: '#EEF0FF',
+  timelineLine: '#E5FAFA',
 
   tlCardRed: '#FCEEF1',
   tlCardPurple: '#EEEEFF',
