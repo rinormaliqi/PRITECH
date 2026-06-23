@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,72 +11,56 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useTasksContext } from '../context/TasksContext';
+import { useUserContext } from '../context/UserContext';
+import { RootStackParamList } from '../types';
 import SearchBar from '../components/SearchBar';
 import CategoryItem from '../components/CategoryItem';
 import TaskCard from '../components/TaskCard';
-import { RootStackParamList, Task } from '../types';
 import { colors, spacing, radius, typography } from '../theme';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
+const CARD_COLORS = [colors.cardBlue, colors.cardRed];
+
 const H_PAD = spacing.xl;
 
-const CATEGORIES = [
-  {
-    id: 'todo',
-    label: 'To-Do',
-    iconBg: colors.categoryTodoBg,
-    iconName: 'clipboard-outline' as const,
-    iconColor: colors.categoryTodoIcon,
-  },
-  {
-    id: 'progress',
-    label: 'Progress',
-    iconBg: colors.categoryProgressBg,
-    iconName: 'time-outline' as const,
-    iconColor: colors.categoryProgressIcon,
-  },
-  {
-    id: 'done',
-    label: 'Done',
-    iconBg: colors.categoryDoneBg,
-    iconName: 'checkmark-circle-outline' as const,
-    iconColor: colors.categoryDoneIcon,
-  },
-];
-
-const TODAY_TASKS: Task[] = [
-  {
-    id: '1',
-    title: 'Team Meeting',
-    description: 'Group discussion for the new product.',
-    time: '10:00 AM',
-    status: 'progress',
-    progress: 48,
-    cardColor: colors.cardBlue,
-  },
-  {
-    id: '2',
-    title: 'UI Design',
-    description: 'Make a homepage for the app.',
-    time: '11:00 AM',
-    status: 'progress',
-    progress: 35,
-    cardColor: colors.cardRed,
-  },
-  {
-    id: '3',
-    title: 'Code Review',
-    description: 'Review pull requests from the team.',
-    time: '2:00 PM',
-    status: 'todo',
-    progress: 0,
-    cardColor: colors.cardBlue,
-  },
-];
+function timeGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good Morning';
+  if (h < 18) return 'Good Afternoon';
+  return 'Good Evening';
+}
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavProp>();
+  const { name } = useUserContext();
+  const { tasks } = useTasksContext();
+  const [query, setQuery] = React.useState('');
+
+  const counts = useMemo(
+    () => ({
+      total: tasks.length,
+      todo: tasks.filter(t => t.status === 'todo').length,
+      done: tasks.filter(t => t.status === 'done').length,
+    }),
+    [tasks],
+  );
+
+  const isSearching = query.trim().length > 0;
+
+  const displayTasks = useMemo(() => {
+    if (isSearching) {
+      const q = query.trim().toLowerCase();
+      return tasks.filter(t => t.title.toLowerCase().includes(q));
+    }
+    if (tasks.length === 0) return [];
+    const today = new Date().toDateString();
+    const todayTasks = tasks.filter(
+      t => new Date(t.createdAt).toDateString() === today,
+    );
+    return todayTasks.length > 0 ? todayTasks : tasks.slice(0, 5);
+  }, [tasks, query, isSearching]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -90,60 +74,128 @@ export default function HomeScreen() {
             <Ionicons name="menu-outline" size={22} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>R</Text>
+            <Text style={styles.avatarText}>
+              {(name ?? 'U')[0].toUpperCase()}
+            </Text>
           </View>
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.greeting}>Good Morning, Rinor!</Text>
+          <Text style={styles.greeting}>
+            {timeGreeting()}, {name}!
+          </Text>
           <Text style={styles.heroText}>
             {'You have '}
-            <Text style={styles.heroAccent}>49 tasks</Text>
+            <Text style={styles.heroAccent}>
+              {counts.total} task{counts.total !== 1 ? 's' : ''}
+            </Text>
             {'\nthis month'}
           </Text>
         </View>
 
-        <View style={styles.searchRow}>
-          <SearchBar />
+        <View style={styles.searchWrap}>
+          <SearchBar value={query} onChangeText={setQuery} />
         </View>
 
         <View style={styles.categories}>
-          {CATEGORIES.map(cat => (
-            <CategoryItem
-              key={cat.id}
-              label={cat.label}
-              iconBg={cat.iconBg}
-              icon={
-                <Ionicons name={cat.iconName} size={26} color={cat.iconColor} />
-              }
-              onPress={() => navigation.navigate('Schedule')}
-            />
-          ))}
+          <CategoryItem
+            label="To-Do"
+            iconBg={colors.categoryTodoBg}
+            icon={
+              <Ionicons
+                name="clipboard-outline"
+                size={26}
+                color={colors.categoryTodoIcon}
+              />
+            }
+            onPress={() => navigation.navigate('Schedule')}
+          />
+          <CategoryItem
+            label="Done"
+            iconBg={colors.categoryDoneBg}
+            icon={
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={26}
+                color={colors.categoryDoneIcon}
+              />
+            }
+            onPress={() => navigation.navigate('Schedule')}
+          />
+          <CategoryItem
+            label="All Tasks"
+            iconBg={colors.categoryProgressBg}
+            icon={
+              <Ionicons
+                name="grid-outline"
+                size={26}
+                color={colors.categoryProgressIcon}
+              />
+            }
+            onPress={() => navigation.navigate('Schedule')}
+          />
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's Tasks</Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Schedule')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.seeAll}>See All</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>
+            {isSearching ? 'Search Results' : "Today's Tasks"}
+          </Text>
+          {!isSearching && (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Schedule')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.seeAll}>See All</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.taskList}
-          decelerationRate="fast"
-          snapToInterval={201}
-          snapToAlignment="start"
-        >
-          {TODAY_TASKS.map(task => (
-            <TaskCard key={task.id} task={task} />
-          ))}
-        </ScrollView>
+        {displayTasks.length === 0 ? (
+          <View style={styles.emptyCards}>
+            <Ionicons
+              name="clipboard-outline"
+              size={36}
+              color={colors.textMuted}
+            />
+            <Text style={styles.emptyText}>
+              {isSearching ? 'No results found.' : 'No tasks yet.'}
+            </Text>
+            <Text style={styles.emptySubtext}>
+              {isSearching
+                ? 'Try a different search term.'
+                : 'Tap + to add your first task.'}
+            </Text>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.taskList}
+            decelerationRate="fast"
+            snapToInterval={201}
+            snapToAlignment="start"
+          >
+            {displayTasks.map((task, index) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                cardColor={CARD_COLORS[index % CARD_COLORS.length]}
+                onPress={() =>
+                  navigation.navigate('TaskDetail', { taskId: task.id })
+                }
+              />
+            ))}
+          </ScrollView>
+        )}
       </ScrollView>
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('AddTask')}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="add" size={28} color="#FFFFFF" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -157,7 +209,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
@@ -203,13 +255,13 @@ const styles = StyleSheet.create({
     fontSize: typography.xxxl,
     fontWeight: '800',
     color: colors.text,
-    lineHeight: 38,
-    letterSpacing: -0.4,
+    lineHeight: 40,
+    letterSpacing: -0.5,
   },
   heroAccent: {
     color: colors.cardBlue,
   },
-  searchRow: {
+  searchWrap: {
     paddingHorizontal: H_PAD,
     marginBottom: spacing.xxl,
   },
@@ -224,7 +276,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: H_PAD,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
     fontSize: typography.xl,
@@ -240,5 +292,37 @@ const styles = StyleSheet.create({
     paddingLeft: H_PAD,
     paddingRight: spacing.md,
     paddingBottom: 4,
+  },
+  emptyCards: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xxxl,
+    paddingHorizontal: H_PAD,
+  },
+  emptyText: {
+    fontSize: typography.lg,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  emptySubtext: {
+    fontSize: typography.md,
+    color: colors.textMuted,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 32,
+    right: H_PAD,
+    width: 56,
+    height: 56,
+    borderRadius: radius.full,
+    backgroundColor: colors.cardBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.cardBlue,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
 });
