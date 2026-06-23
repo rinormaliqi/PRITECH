@@ -6,6 +6,9 @@ export interface Task {
   description: string;
   status: TaskStatus;
   createdAt: string;
+  finishDate?: string;
+  supervisor: string | null;
+  theme: string;
 }
 
 export interface Quote {
@@ -28,5 +31,6 @@ export type RootStackParamList = {
   Home: undefined;
   AddTask: undefined;
   TaskDetail: { taskId: string };
-  Schedule: undefined;
+  Schedule: { filter?: 'all' | 'todo' | 'done' } | undefined;
+  Profile: undefined;
 };

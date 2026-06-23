@@ -10,9 +10,13 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { RootStackParamList } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 import { useTasksContext } from '../context/TasksContext';
+import { COLLARS, DEFAULT_COLLAR_ID } from '../data/collars';
+import { TASK_THEMES, DEFAULT_THEME_ID } from '../data/taskThemes';
+import SelectPicker, { PickerOption } from '../components/SelectPicker';
 import { colors, spacing, radius, typography } from '../theme';
 
 const MAX_TITLE = 80;
@@ -20,11 +24,27 @@ const MAX_DESC = 300;
 
 const webInput = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : {};
 
+const SUPERVISOR_OPTIONS: PickerOption[] = COLLARS.map(c => ({
+  value: c.id,
+  label: c.title,
+  color: c.color,
+  bg: c.bg,
+}));
+
+const THEME_OPTIONS: PickerOption[] = TASK_THEMES.map(t => ({
+  value: t.id,
+  label: t.label,
+  color: t.color,
+  bg: t.bg,
+}));
+
 export default function AddTaskScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { addTask } = useTasksContext();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [supervisor, setSupervisor] = useState<string | null>(null);
+  const [theme, setTheme] = useState(DEFAULT_THEME_ID);
   const [titleError, setTitleError] = useState('');
   const descRef = useRef<TextInput>(null);
 
@@ -33,7 +53,7 @@ export default function AddTaskScreen() {
       setTitleError('Title is required.');
       return;
     }
-    addTask(title, description);
+    addTask(title, description, supervisor, theme);
     navigation.goBack();
   };
 
@@ -100,6 +120,22 @@ export default function AddTaskScreen() {
             />
             <Text style={styles.counter}>{description.length}/{MAX_DESC}</Text>
           </View>
+
+          <SelectPicker
+            label="Theme / Category"
+            value={theme}
+            options={THEME_OPTIONS}
+            onChange={setTheme}
+            required
+          />
+
+          <SelectPicker
+            label="Supervisor"
+            value={supervisor}
+            options={SUPERVISOR_OPTIONS}
+            onChange={setSupervisor}
+            placeholder="Assign a supervisor..."
+          />
         </ScrollView>
 
         <View style={styles.footer}>

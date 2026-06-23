@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Task } from '../types';
+import { DEFAULT_THEME_ID } from '../data/taskThemes';
 
 const TASKS_KEY = '@pritech:tasks';
 
@@ -18,34 +19,56 @@ export function useTasks() {
   useEffect(() => {
     AsyncStorage.getItem(TASKS_KEY).then(stored => {
       if (stored) {
-        try { setTasks(JSON.parse(stored)); } catch {}
+        try {
+          const parsed: Task[] = JSON.parse(stored);
+          const migrated = parsed.map(t => ({
+            ...t,
+            supervisor: t.supervisor ?? null,
+            theme: t.theme ?? DEFAULT_THEME_ID,
+          }));
+          setTasks(migrated);
+        } catch {}
       }
       setLoading(false);
     });
   }, []);
 
-  const addTask = useCallback((title: string, description: string) => {
-    const task: Task = {
-      id: generateId(),
-      title: title.trim(),
-      description: description.trim(),
-      status: 'todo',
-      createdAt: new Date().toISOString(),
-    };
-    setTasks(prev => {
-      const next = [task, ...prev];
-      save(next);
-      return next;
-    });
-  }, []);
+  const addTask = useCallback(
+    (
+      title: string,
+      description: string,
+      supervisor: string | null = null,
+      theme: string = DEFAULT_THEME_ID,
+    ) => {
+      const task: Task = {
+        id: generateId(),
+        title: title.trim(),
+        description: description.trim(),
+        status: 'todo',
+        createdAt: new Date().toISOString(),
+        supervisor,
+        theme,
+      };
+      setTasks(prev => {
+        const next = [task, ...prev];
+        save(next);
+        return next;
+      });
+    },
+    [],
+  );
 
   const toggleTask = useCallback((id: string) => {
     setTasks(prev => {
-      const next = prev.map(t =>
-        t.id === id
-          ? { ...t, status: (t.status === 'done' ? 'todo' : 'done') as Task['status'] }
-          : t,
-      );
+      const next = prev.map(t => {
+        if (t.id !== id) return t;
+        const becomingDone = t.status !== 'done';
+        return {
+          ...t,
+          status: (becomingDone ? 'done' : 'todo') as Task['status'],
+          finishDate: becomingDone ? new Date().toISOString() : undefined,
+        };
+      });
       save(next);
       return next;
     });

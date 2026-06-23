@@ -9,10 +9,12 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, NavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTasksContext } from '../context/TasksContext';
 import { RootStackParamList } from '../types';
+import { getCollar } from '../data/collars';
+import { getTheme } from '../data/taskThemes';
 import { colors, spacing, radius, typography } from '../theme';
 
 type RouteType = RouteProp<RootStackParamList, 'TaskDetail'>;
@@ -27,7 +29,7 @@ function formatDate(iso: string): string {
 }
 
 export default function TaskDetailScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteType>();
   const { getTask, toggleTask, deleteTask } = useTasksContext();
 
@@ -69,6 +71,39 @@ export default function TaskDetailScreen() {
   }
 
   const isDone = task.status === 'done';
+  const theme = getTheme(task.theme);
+  const supervisor = task.supervisor ? getCollar(task.supervisor) : null;
+
+  const confirmToggle = () => {
+    const action = isDone ? 'Mark as Active' : 'Mark as Done';
+    const successMsg = isDone
+      ? 'Task has been marked as active.'
+      : 'Task has been marked as done.';
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${action}?\n\nAre you sure you want to change the status of this task?`)) {
+        toggleTask(task.id);
+        window.alert(successMsg);
+      }
+      return;
+    }
+
+    Alert.alert(
+      action,
+      'Are you sure you want to change the status of this task?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Yes, continue',
+          style: 'default',
+          onPress: () => {
+            toggleTask(task.id);
+            Alert.alert('Done', successMsg, [{ text: 'OK' }]);
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -94,12 +129,15 @@ export default function TaskDetailScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.statusRow}>
+        <View style={styles.badgeRow}>
           <View style={[styles.badge, isDone ? styles.badgeDone : styles.badgeTodo]}>
             <View style={[styles.badgeDot, isDone ? styles.dotDone : styles.dotTodo]} />
             <Text style={[styles.badgeText, isDone ? styles.textDone : styles.textTodo]}>
               {isDone ? 'Completed' : 'Active'}
             </Text>
+          </View>
+          <View style={[styles.themeBadge, { backgroundColor: theme.bg }]}>
+            <Text style={[styles.themeText, { color: theme.color }]}>{theme.label}</Text>
           </View>
         </View>
 
@@ -111,16 +149,48 @@ export default function TaskDetailScreen() {
           <Text style={styles.noDesc}>No description added.</Text>
         )}
 
-        <View style={styles.metaRow}>
-          <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.metaText}>Created {formatDate(task.createdAt)}</Text>
+        <View style={styles.metaSection}>
+          <View style={styles.metaRow}>
+            <Ionicons name="calendar-outline" size={15} color={colors.textMuted} />
+            <View>
+              <Text style={styles.metaLabel}>Created</Text>
+              <Text style={styles.metaValue}>{formatDate(task.createdAt)}</Text>
+            </View>
+          </View>
+
+          {task.finishDate && (
+            <View style={styles.metaRow}>
+              <Ionicons name="checkmark-circle-outline" size={15} color={colors.categoryDoneIcon} />
+              <View>
+                <Text style={styles.metaLabel}>Completed</Text>
+                <Text style={[styles.metaValue, { color: colors.categoryDoneIcon }]}>
+                  {formatDate(task.finishDate)}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {supervisor && (
+            <View style={styles.metaRow}>
+              <Ionicons name="person-outline" size={15} color={colors.textMuted} />
+              <View>
+                <Text style={styles.metaLabel}>Supervisor</Text>
+                <View style={styles.supervisorChip}>
+                  <View style={[styles.supervisorDot, { backgroundColor: supervisor.color }]} />
+                  <Text style={[styles.metaValue, { color: supervisor.color }]}>
+                    {supervisor.title}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.toggleBtn, isDone && styles.toggleBtnDone]}
-          onPress={() => toggleTask(task.id)}
+          onPress={confirmToggle}
           activeOpacity={0.85}
         >
           <Ionicons
@@ -182,8 +252,10 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
     paddingBottom: 40,
   },
-  statusRow: {
+  badgeRow: {
     flexDirection: 'row',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   badge: {
     flexDirection: 'row',
@@ -194,7 +266,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   badgeTodo: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#E5FAFA',
   },
   badgeDone: {
     backgroundColor: colors.categoryDoneBg,
@@ -220,6 +292,15 @@ const styles = StyleSheet.create({
   textDone: {
     color: colors.categoryDoneIcon,
   },
+  themeBadge: {
+    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+  },
+  themeText: {
+    fontSize: typography.sm,
+    fontWeight: '600',
+  },
   title: {
     fontSize: typography.xxl,
     fontWeight: '700',
@@ -241,14 +322,39 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontStyle: 'italic',
   },
+  metaSection: {
+    gap: spacing.lg,
+    backgroundColor: '#F8F8FC',
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
   metaRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  metaLabel: {
+    fontSize: typography.xs,
+    color: colors.textMuted,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  metaValue: {
+    fontSize: typography.sm,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  supervisorChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
   },
-  metaText: {
-    fontSize: typography.sm,
-    color: colors.textMuted,
+  supervisorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   footer: {
     paddingHorizontal: spacing.xl,
